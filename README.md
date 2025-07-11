@@ -132,53 +132,37 @@ ROE 하락, 비용 증가 → 건전성 경고
 
 ## 🧯 트러블슈팅
 
-> 각 항목은 토글(접기/펼치기) 기능으로 구성되어 있으며, 실제로 경험한 오류를 바탕으로 해결 단계를 기록했습니다.  
-
 ---
 
-<details>
-<summary>+ <strong>1. 외부 테이블을 이용하기 위한 파일 위치 선정</strong></summary>
-
-```
-📌 요약  
-Oracle에서 외부 테이블을 통해 CSV를 로드하려 했지만, 로그 파일 경로 문제로 실행 실패
-```
+### 🔧 1. 외부 테이블을 이용하기 위한 파일 위치 선정  
+📝 Oracle에서 외부 테이블을 통해 CSV를 로드하려 했지만, 로그 파일 경로 문제로 실행 실패
 
 ```sql
-🔴 에러 내용
-SQL Error [29913] [99999]: ORA-29913: error in executing ODCIEXTTABLEOPEN callout  
-ORA-29400: data cartridge error  
+SQL Error [29913] [99999]: ORA-29913: error in executing ODCIEXTTABLEOPEN callout
+ORA-29400: data cartridge error
 error opening file /ce5/02.sql/csv/TEST_EXTERNAL_1887.log
 ```
 
-```
-📄 상세정보  
-Oracle 외부 테이블 정의는 문제 없었으나, 로그 파일 저장 경로 권한 문제로 인해 실패 발생
-```
+### 📄 상세정보  
+- 외부 테이블 정의 자체는 문제 없었으나, 로그 파일 생성 시 OS 권한 문제로 실패
+- Oracle 프로세스는 /home 같은 상위 경로에 접근 권한이 없음
 
-```
-⚠️ 영향  
-CSV 파일 기반 외부 테이블 사용 불가
-```
+### ⚠️ 영향  
+- 외부 테이블 기반의 CSV 조회 실패  
+- 데이터 적재 자동화 단계에서 중단됨
 
-```
-🛠 처리한 단계
-1. DIRECTORY 객체 생성 (권한 허용된 경로로)
-2. 외부 테이블 정의 시 `DEFAULT DIRECTORY` 명시
-3. 로그/데이터 파일을 `/home/total` 로 이동하고 권한 부여
-```
+### 🛠 처리한 단계  
+1. Oracle에서 DIRECTORY 객체 생성: `CREATE DIRECTORY total_dir AS '/home/total';`  
+2. 외부 테이블 생성 시 `DEFAULT DIRECTORY total_dir` 명시  
+3. 해당 디렉토리에 파일 이동 및 권한 부여 (`chmod`, `chown`)
 
-</details>
+### ✅ 해결 방법  
+- 로그 및 데이터 파일은 반드시 Oracle이 직접 접근 가능한 디렉토리 내에 위치해야 함 (`/home/total` 등)
 
 ---
 
-<details>
-<summary>+ <strong>2. Oracle SQL 테이블 컬럼명이 한글로 깨져서 출력됨</strong></summary>
-
-```
-📌 요약  
-Oracle SQL에서 `desc` 명령어 시 컬럼명이 `???`로 출력되는 문제 발생
-```
+### 🔧 2. Oracle SQL 테이블 컬럼명이 한글로 깨져서 출력됨  
+📝 `desc` 명령어 시 컬럼명이 `???`로 출력되는 문자 인코딩 문제 발생
 
 ```sql
 SQL> desc total;
@@ -186,197 +170,149 @@ SQL> desc total;
  ???       VARCHAR2(100)
 ```
 
-```
-📄 상세정보  
-- Oracle 서버 문자셋은 `AL32UTF8`로 문제 없음  
-- 클라이언트 환경변수(NLS_LANG)가 설정되지 않아 발생
-```
+### 📄 상세정보  
+- DB 자체 문자셋은 `AL32UTF8`로 설정되어 문제 없음  
+- 클라이언트 환경변수 `NLS_LANG`이 미설정 → 한글 출력 불가
 
-```
-⚠️ 영향  
-컬럼 구조 파악이 불가능 → 쿼리 작성 어려움
-```
+### ⚠️ 영향  
+- SQL*Plus 또는 CLI 환경에서 컬럼 구조 파악이 어려움  
+- 쿼리 작성 시 오타 발생 가능성 증가
 
-```
-🛠 처리한 단계  
+### 🛠 처리한 단계  
+
 ```bash
 export NLS_LANG=KOREAN_KOREA.AL32UTF8
 ```
-→ SQL*Plus 재접속 후 컬럼명 정상 출력 확인
-```
 
-</details>
-
----
-
-<details>
-<summary>+ <strong>3. Oracle에서 파티셔닝 안됨</strong></summary>
-
-```
-📌 요약  
-Oracle XE에서는 공식적으로 파티셔닝 기능 미지원
-```
-
-```
-⚠️ 영향  
-대용량 처리 불가 → 파티셔닝 목적 불충족
-```
-
-```
-🛠 처리한 단계  
-MySQL로 DBMS 전환 후 RANGE + SUBPARTITION 적용
-```
-
-</details>
+### ✅ 해결 방법  
+- 환경변수 적용 후 SQL*Plus 재접속 → 컬럼명 정상 출력 확인됨
 
 ---
 
-<details>
-<summary>+ <strong>4. 문자열 길이가 컬럼 정의보다 길기 때문에 발생하는 오류</strong></summary>
+### 🔧 3. Oracle에서 파티셔닝 안됨  
+📝 Oracle XE는 파티셔닝 기능 미지원
 
-```
-📌 요약  
-항목코드 VARCHAR 길이보다 긴 데이터가 들어와 에러 발생
-```
+### 📄 상세정보  
+- Oracle XE 11g는 RANGE, HASH 등 파티셔닝 기능을 공식적으로 제공하지 않음
+
+### ⚠️ 영향  
+- 대용량 테이블 쿼리 성능 저하  
+- 분석 속도 저하
+
+### 🛠 처리한 단계  
+- DBMS를 MySQL로 전환하고 RANGE + HASH 파티셔닝 구조로 재설계
+
+### ✅ 해결 방법  
+- MySQL 8.0 이상에서는 파티셔닝 기능 기본 제공 → 안정적으로 대체 완료
+
+---
+
+### 🔧 4. 문자열 길이가 컬럼 정의보다 길기 때문에 발생하는 오류  
+📝 VARCHAR 길이보다 긴 문자열 입력 시 INSERT 실패
 
 ```sql
-SQL Error [1406] [22001]: Data too long for column '항목코드'
+SQL Error [1406] [22001]: Data too long for column '항목코드' at row 26
 ```
 
-```
-⚠️ 영향  
-데이터 INSERT 실패 → 분석 대상 누락
-```
+### 📄 상세정보  
+- 항목코드 VARCHAR(200) → 일부 데이터는 220자 이상
 
-```
-🛠 처리한 단계  
+### ⚠️ 영향  
+- 전체 데이터 적재 실패 또는 누락  
+- 자동화 과정 중 중단
+
+### 🛠 처리한 단계  
+
 ```sql
 ALTER TABLE financial
 MODIFY COLUMN 항목코드 VARCHAR(500);
 ```
-```
 
-</details>
-
----
-
-<details>
-<summary>+ <strong>5. RANGE 파티셔닝은 사용할 수 있는 컬럼 타입에 제한</strong></summary>
-
-```
-📌 요약  
-RANGE 파티셔닝은 INT/DATE 등 일부 타입만 사용 가능
-```
-
-```
-📄 상세정보  
-TEXT, BLOB, FLOAT 등의 타입은 RANGE 파티션 불가  
-→ 종목코드를 INT로 변환하거나, 결산일 기준 파티셔닝으로 변경
-```
-
-```
-🛠 처리한 단계  
-컬럼 타입 변경 → DATE 컬럼 기반 RANGE 파티셔닝으로 전환
-```
-
-</details>
+### ✅ 해결 방법  
+- VARCHAR 길이 상향 조정 → 모든 데이터 정상 입력 확인
 
 ---
 
-<details>
-<summary>+ <strong>6. Oracle - Tableau 연결 실패</strong></summary>
+### 🔧 5. RANGE 파티셔닝은 사용할 수 있는 컬럼 타입에 제한  
+📝 VARCHAR 컬럼에 RANGE 파티셔닝 시 오류 발생
 
-```
-📌 요약  
-Docker 내 Oracle과 Tableau 연결 시도 실패
-```
+### 📄 상세정보  
+- MySQL RANGE 파티셔닝은 INT, DATE 등 제한된 타입만 허용  
+- 종목코드는 문자열 형태(VARCHAR)로 저장되어 사용 불가
 
-```
-📄 상세정보  
-- Oracle 11g XE Docker 이미지 사용  
-- NAT 포트포워딩 (1521) 및 리스너 정상  
-- Tableau에서 ORA-12541 오류 지속 발생
-```
+### ⚠️ 영향  
+- 종목코드를 기준으로 파티셔닝 불가  
+- 성능 개선 실패
 
-```
-⚠️ 영향  
-Tableau 시각화 불가 → Kibana로 대체
-```
+### 🛠 처리한 단계  
+- 종목코드를 `CAST(종목코드 AS UNSIGNED)` 또는 DATE 기반 파티셔닝으로 변경
 
-```
-🛠 처리한 단계  
-- 리스너 상태 점검
-- 포트포워딩, 방화벽 비활성화
-- 연결 설정 반복 시도 (SID, 서비스명 등 조정)
-```
-
-```
-📈 다음 단계  
-- Oracle을 직접 설치하거나, VirtualBox 브리지 네트워크 사용 고려
-```
-
-</details>
+### ✅ 다음 단계  
+- VARCHAR 파티셔닝 필요 시 HASH 또는 LIST 방식 고려
 
 ---
 
-<details>
-<summary>+ <strong>7. MySQL 내에서 [] 처리 안 되는 문제</strong></summary>
+### 🔧 6. Oracle - Tableau 연결 실패  
+📝 Docker 기반 Oracle에 Tableau 연결 실패 (`ORA-12541`)
 
-```
-📌 요약  
-`[138930]` 형태로 저장된 종목코드가 MySQL에서 쿼리 인식 안됨
-```
+### 📄 상세정보  
+- Oracle XE Docker 이미지 사용  
+- NAT + 포트포워딩(1521) 구성  
+- 리스너 정상 작동 확인 후에도 Tableau 연결 불가
 
-```
-📄 상세정보  
-- 대괄호 미제거로 필터 조건 불일치
-- 숫자형 비교, 문자열 비교 모두 실패
-```
+### ⚠️ 영향  
+- Tableau 시각화 불가 → Kibana로 대체 진행
 
-```
-🛠 처리한 단계  
+### 🛠 처리한 단계  
+- 리스너 상태 확인 (`lsnrctl status`)  
+- Windows 방화벽 및 VirtualBox 포트포워딩 점검  
+- 다양한 서비스 이름/계정 시도
+
+### ✅ 다음 단계  
+- Oracle을 Windows 로컬에 직접 설치하거나 브리지 네트워크 방식 고려
+
+---
+
+### 🔧 7. MySQL 내에서 [] 처리 안 되는 문제  
+📝 `[138930]` 형태의 종목코드 → 쿼리 인식 실패
+
+### 📄 상세정보  
+- Pandas에서 CSV 처리 시 `종목코드`가 리스트처럼 저장됨  
+- `[` 및 `]` 문자로 인해 문자열 비교 실패
+
+### ⚠️ 영향  
+- WHERE 조건식 작동 안 함  
+- 그룹화, 정렬 등 전처리 오류 발생
+
+### 🛠 처리한 단계  
+
 ```python
 df['종목코드'] = df['종목코드'].apply(lambda x: str(x).replace('[', '').replace(']', '').strip())
 ```
-→ 재업로드 후 검색 및 정렬 정상 작동
-```
 
-</details>
+### ✅ 해결 방법  
+- 전처리 후 재업로드 → SQL 쿼리 정상 작동
 
 ---
 
-<details>
-<summary>+ <strong>8. 항목코드 해석 문제</strong></summary>
+### 🔧 8. 항목코드 해석 문제  
+📝 항목명이 없이 `항목코드`만 존재 → 지표 계산 시 가독성 저하
 
-```
-📌 요약  
-지표 산출에 필요한 항목명이 없어, 항목코드만으로 추출 어려움
-```
+### 📄 상세정보  
+- 항목코드 예: `ifrs-full_ProfitLoss`, `dart_Liabilities`  
+- 사람이 이해할 수 있는 "총부채", "자본총계" 등의 이름 없음
 
-```
-📄 상세정보  
-- CSV 및 DB에는 `항목명` 없이 `항목코드`만 존재  
-- 항목코드 예: `ifrs-full_ProfitLoss`, `dart_Liabilities`
-- 사람이 읽는 용도 아님 → 직접 필터링 불가능
-```
+### ⚠️ 영향  
+- 필터링 조건 불명확  
+- 지표별 SQL 자동화 로직 구축 어려움
 
-```
-⚠️ 영향  
-- SQL 필터 조건 불명확 → 지표 정확성 저하  
-- 자동화 및 유지보수 어려움
-```
+### 🛠 처리한 단계  
+1. DART 기준 항목코드 목록 확보  
+2. 지표별 키워드 기반 매핑 정의 (e.g., `ProfitLoss`, `Liabilit`)  
+3. LIKE 검색 기반 항목 자동 추출
 
-```
-🛠 처리한 단계  
-1. 714개 항목코드 수집  
-2. 키워드 기반 LIKE 검색 적용  
-3. 항목코드 → 지표 매핑 자동화
-```
-
-```
-📈 다음 단계  
+### ✅ 다음 단계  
 - 항목코드 ↔ 항목명 매핑 테이블 구축  
-- 업종별 특수 항목 반영 및 ML 분류 모델 고려
-```
+- 업종별 커스터마이징 및 유지보수 자동화 고려
 
-</details>
+
