@@ -134,8 +134,10 @@ ROE 하락, 비용 증가 → 건전성 경고
 
 ---
 
-### 🔧 1. 외부 테이블을 이용하기 위한 파일 위치 선정  
-📝 Oracle에서 외부 테이블을 통해 CSV를 로드하려 했지만, 로그 파일 경로 문제로 실행 실패
+<details>
+<summary>🔧 1. 외부 테이블을 이용하기 위한 파일 위치 선정</summary>
+
+### 📝 Oracle에서 외부 테이블을 통해 CSV를 로드하려 했지만, 로그 파일 경로 문제로 실행 실패
 
 ```sql
 SQL Error [29913] [99999]: ORA-29913: error in executing ODCIEXTTABLEOPEN callout
@@ -144,7 +146,7 @@ error opening file /ce5/02.sql/csv/TEST_EXTERNAL_1887.log
 ```
 
 ### 📄 상세정보  
-- 외부 테이블 정의 자체는 문제 없었으나, 로그 파일 생성 시 OS 권한 문제로 실패
+- 외부 테이블 정의 자체는 문제 없었으나, 로그 파일 생성 시 OS 권한 문제로 실패  
 - Oracle 프로세스는 /home 같은 상위 경로에 접근 권한이 없음
 
 ### ⚠️ 영향  
@@ -159,10 +161,14 @@ error opening file /ce5/02.sql/csv/TEST_EXTERNAL_1887.log
 ### ✅ 해결 방법  
 - 로그 및 데이터 파일은 반드시 Oracle이 직접 접근 가능한 디렉토리 내에 위치해야 함 (`/home/total` 등)
 
+</details>
+
 ---
 
-### 🔧 2. Oracle SQL 테이블 컬럼명이 한글로 깨져서 출력됨  
-📝 `desc` 명령어 시 컬럼명이 `???`로 출력되는 문자 인코딩 문제 발생
+<details>
+<summary>🔧 2. Oracle SQL 테이블 컬럼명이 한글로 깨져서 출력됨</summary>
+
+### 📝 `desc` 명령어 시 컬럼명이 `???`로 출력되는 문자 인코딩 문제 발생
 
 ```sql
 SQL> desc total;
@@ -187,10 +193,14 @@ export NLS_LANG=KOREAN_KOREA.AL32UTF8
 ### ✅ 해결 방법  
 - 환경변수 적용 후 SQL*Plus 재접속 → 컬럼명 정상 출력 확인됨
 
+</details>
+
 ---
 
-### 🔧 3. Oracle에서 파티셔닝 안됨  
-📝 Oracle XE는 파티셔닝 기능 미지원
+<details>
+<summary>🔧 3. Oracle에서 파티셔닝 안됨</summary>
+
+### 📝 Oracle XE는 파티셔닝 기능 미지원
 
 ### 📄 상세정보  
 - Oracle XE 11g는 RANGE, HASH 등 파티셔닝 기능을 공식적으로 제공하지 않음
@@ -205,10 +215,14 @@ export NLS_LANG=KOREAN_KOREA.AL32UTF8
 ### ✅ 해결 방법  
 - MySQL 8.0 이상에서는 파티셔닝 기능 기본 제공 → 안정적으로 대체 완료
 
+</details>
+
 ---
 
-### 🔧 4. 문자열 길이가 컬럼 정의보다 길기 때문에 발생하는 오류  
-📝 VARCHAR 길이보다 긴 문자열 입력 시 INSERT 실패
+<details>
+<summary>🔧 4. 문자열 길이가 컬럼 정의보다 길기 때문에 발생하는 오류</summary>
+
+### 📝 VARCHAR 길이보다 긴 문자열 입력 시 INSERT 실패
 
 ```sql
 SQL Error [1406] [22001]: Data too long for column '항목코드' at row 26
@@ -231,10 +245,14 @@ MODIFY COLUMN 항목코드 VARCHAR(500);
 ### ✅ 해결 방법  
 - VARCHAR 길이 상향 조정 → 모든 데이터 정상 입력 확인
 
+</details>
+
 ---
 
-### 🔧 5. RANGE 파티셔닝은 사용할 수 있는 컬럼 타입에 제한  
-📝 VARCHAR 컬럼에 RANGE 파티셔닝 시 오류 발생
+<details>
+<summary>🔧 5. RANGE 파티셔닝은 사용할 수 있는 컬럼 타입에 제한</summary>
+
+### 📝 VARCHAR 컬럼에 RANGE 파티셔닝 시 오류 발생
 
 ### 📄 상세정보  
 - MySQL RANGE 파티셔닝은 INT, DATE 등 제한된 타입만 허용  
@@ -250,10 +268,14 @@ MODIFY COLUMN 항목코드 VARCHAR(500);
 ### ✅ 다음 단계  
 - VARCHAR 파티셔닝 필요 시 HASH 또는 LIST 방식 고려
 
+</details>
+
 ---
 
-### 🔧 6. Oracle - Tableau 연결 실패  
-📝 Docker 기반 Oracle에 Tableau 연결 실패 (`ORA-12541`)
+<details>
+<summary>🔧 6. Oracle - Tableau 연결 실패</summary>
+
+### 📝 Docker 기반 Oracle에 Tableau 연결 실패 (`ORA-12541`)
 
 ### 📄 상세정보  
 - Oracle XE Docker 이미지 사용  
@@ -271,10 +293,14 @@ MODIFY COLUMN 항목코드 VARCHAR(500);
 ### ✅ 다음 단계  
 - Oracle을 Windows 로컬에 직접 설치하거나 브리지 네트워크 방식 고려
 
+</details>
+
 ---
 
-### 🔧 7. MySQL 내에서 [] 처리 안 되는 문제  
-📝 `[138930]` 형태의 종목코드 → 쿼리 인식 실패
+<details>
+<summary>🔧 7. MySQL 내에서 [] 처리 안 되는 문제</summary>
+
+### 📝 `[138930]` 형태의 종목코드 → 쿼리 인식 실패
 
 ### 📄 상세정보  
 - Pandas에서 CSV 처리 시 `종목코드`가 리스트처럼 저장됨  
@@ -293,10 +319,14 @@ df['종목코드'] = df['종목코드'].apply(lambda x: str(x).replace('[', '').
 ### ✅ 해결 방법  
 - 전처리 후 재업로드 → SQL 쿼리 정상 작동
 
+</details>
+
 ---
 
-### 🔧 8. 항목코드 해석 문제  
-📝 항목명이 없이 `항목코드`만 존재 → 지표 계산 시 가독성 저하
+<details>
+<summary>🔧 8. 항목코드 해석 문제</summary>
+
+### 📝 항목명이 없이 `항목코드`만 존재 → 지표 계산 시 가독성 저하
 
 ### 📄 상세정보  
 - 항목코드 예: `ifrs-full_ProfitLoss`, `dart_Liabilities`  
@@ -314,5 +344,8 @@ df['종목코드'] = df['종목코드'].apply(lambda x: str(x).replace('[', '').
 ### ✅ 다음 단계  
 - 항목코드 ↔ 항목명 매핑 테이블 구축  
 - 업종별 커스터마이징 및 유지보수 자동화 고려
+
+</details>
+
 
 
