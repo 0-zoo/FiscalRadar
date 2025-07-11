@@ -10,8 +10,6 @@
 
 **MySQL의 파티셔닝 기능**을 활용해 **연도별·기업별** 데이터 처리 성능을 극대화하고, SQL 기반의 지표 계산을 통해 **위험 기업 탐지, 산업군 비교 분석, 성장성 평가** 등 다양한 정량적 인사이트를 도출합니다.
 
-데이터셋 출처: https://www.data.go.kr/data/15034611/fileData.do
-
 ---
 
 ## 👤 팀원 소개
@@ -27,7 +25,8 @@
 </table>
 
 본 프로젝트에 대한 자세한 정리는 Notion에서 확인할 수 있습니다.  
-<br> 👉 [📘 노션 문서 바로가기](https://www.notion.so/your-notion-link)  
+👉 [📘 노션 문서 바로가기](https://www.notion.so/your-notion-link)  
+
 ---
 
 ## 🎯 프로젝트 목표
@@ -43,7 +42,7 @@
 
 ## 📦 데이터셋 출처
 
-* 전자공시 OPEN DART 시스템 (https://opendart.fss.or.kr/)
+* 금융감독원 재무제표 데이터셋 (https://www.data.go.kr/data/15034611/fileData.do)
 
 * 주요 항목: 금융감독원_재무정보조회_단일회사 재무제표 정보
 
@@ -106,6 +105,8 @@ SUBPARTITIONS 3 (
 
 ✔ 서브 파티션에서 기업명 해시를 사용해 병렬성 강화
 
+<img width="760" height="200" alt="image" src="https://github.com/user-attachments/assets/93792f1d-012a-48e9-87e8-861c96ccde24" />
+
 ---
 ## 🛠 기술 스택
 | 범주  | 도구                              |
@@ -121,12 +122,14 @@ SUBPARTITIONS 3 (
 
 ### 주요 지표
 
-| 지표 | 계산 방식 | 의미 |
+| 지표 유형 | 지표명 | 항목명 조합 (항목명 값 기준) |
 | --- | --- | --- |
-| 부채비율 | 총부채 / 자본총계 × 100 | 기업의 재무 건전성 평가 |
-| ROE | 당기순이익 / 자본총계 × 100 | 수익성 지표 |
-| 자본잠식 | 자본총계 ≤ 0 여부 | 부실 위험 탐지 |
-| 영업이익 성장률 | 전년도 대비 증가율 | 성장성 평가 |
+| 안정성 | 부채비율 | 총부채 / 자본총계 |
+|  | 이자보상배율 | 영업이익 / 이자비용 |
+| 수익성 | ROE | 당기순이익 / 자본총계 |
+|  | ROA | 당기순이익 / 총자산 |
+| 성장성 | 영업이익 증가율 | (당기 - 전기) / 전기 |
+|  | 순이익 증가율 | 당기순이익(당기) - 전기 / 전기 |
 
 ---
 ## 📊 분석 인사이트
@@ -148,30 +151,40 @@ SUBPARTITIONS 3 (
 ## 📉 사례 기반 리스크 탐지
 
 - **미래에셋증권**: 부채비율 급등 (800% → 1100%)
+  - https://v.daum.net/v/20240522191424944
 - **우리금융지주**: ROE 하락, 순이익 -25% 감소
+    - https://www.ibtomato.com/mobile/mView.aspx?no=14916#:~:text=,%EB%8B%A4%EA%B0%81%ED%99%94%EC%99%80%20%EC%9E%90%EA%B8%88%20%EC%A1%B0%EB%8B%AC%EC%9D%B4%20%EC%A0%88%EC%8B%A4%ED%95%B4%EC%A1%8C%EB%8B%A4%EB%8A%94%20%ED%8F%89%EA%B0%80%EB%8B%A4
 - **NH농협손해보험**: 지급여력비율 급락 (316% → 175%)
+    - https://kpinews.kr/newsView/1065600605746042
 
 ---
 
 ## ✅ 주요 기능 구현 요약 및 핵심 SQL 분석 결과
-
-### ✅ 데이터 처리 및 테이블 설계
-- `financial` 테이블 생성 및 `항목코드` 필드를 `TEXT` 타입으로 변경 (길이 제한 이슈 해결)
-- CSV 데이터(`total_final.csv`) 로드 시 `STR_TO_DATE` 함수로 날짜 문자열을 `결산기준일`에 변환 저장
-- `금액` 필드는 문자열에서 숫자로 정제 (`REPLACE` + `CAST`)
-
-
-### 🗂 파티셔닝 적용
-- `finance_data_partitioned` 테이블에 **연도 기준 RANGE 파티셔닝** 적용
-  - 파티션: 2022, 2023, 2024, MAXVALUE
-- 정제된 데이터를 `financial` → `finance_data_partitioned`로 이관
-
 
 ### 📊 재무 지표 분석 SQL
 
 - **부채비율 계산**  
   `총부채 / 자본총계 * 100`  
   (연도별 · 기업별)
+  
+  ```sql
+  WITH debt AS (
+    SELECT 회사명, 종목코드, 결산기준일, 금액 AS 총부채
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%Liabilit%'
+  ),
+  equity AS (
+    SELECT 회사명, 종목코드, 결산기준일, 금액 AS 자본총계
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%Equity%'
+  )
+  SELECT d.회사명, d.종목코드, d.결산기준일,
+         ROUND(d.총부채 / NULLIF(e.자본총계, 0) * 100, 2) AS 부채비율
+  FROM debt d
+  JOIN equity e
+    ON d.회사명 = e.회사명 AND d.결산기준일 = e.결산기준일;
+  ```
+  
 
 - **자본잠식 기업 탐지**  
   `자본총계 <= 0` 조건
@@ -186,7 +199,7 @@ SUBPARTITIONS 3 (
   `부채비율 > 200%` 또는 `자본총계 ≤ 0` 조건 포함
 
 
-### 🔍 주요 분석 결과 예시
+### 🔍 주요 분석 결과
 
 - **부채비율 > 200% 기업**  
   유안타증권, DB금융투자, 한국투자증권 등 다수 존재
@@ -201,6 +214,9 @@ SUBPARTITIONS 3 (
   - 2022년: `14개사`
   - 2023년: `14개사`
   - 2024년: `16개사`
+ 
+    <img width="1492" height="778" alt="image (2)" src="https://github.com/user-attachments/assets/b57cd900-c572-4a25-8b03-c264bad262fc" />
+
 
 ---
 
