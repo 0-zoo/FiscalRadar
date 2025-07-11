@@ -139,7 +139,7 @@ SUBPARTITIONS 3 (
 - **미래에셋증권**: 부채비율 급등 (800% → 1100%)
   - https://v.daum.net/v/20240522191424944
 - **우리금융지주**: ROE 하락, 순이익 -25% 감소
-    - https://www.ibtomato.com/mobile/mView.aspx?no=14916#:~:text=,%EB%8B%A4%EA%B0%81%ED%99%94%EC%99%80%20%EC%9E%90%EA%B8%88%20%EC%A1%B0%EB%8B%AC%EC%9D%B4%20%EC%A0%88%EC%8B%A4%ED%95%B4%EC%A1%8C%EB%8B%A4%EB%8A%94%20%ED%8F%89%EA%B0%80%EB%8B%A4
+    - https://www.ibtomato.com/View.aspx?no=14916#
 - **NH농협손해보험**: 지급여력비율 급락 (316% → 175%)
     - https://kpinews.kr/newsView/1065600605746042
 
