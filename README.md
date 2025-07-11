@@ -5,10 +5,9 @@
 ---
 
 ## 🧾 프로젝트 개요
+본 프로젝트는 금융감독원에서 제공하는 **대규모 재무제표 데이터**를 기반으로, **기업의 재무 건전성**을 다각도로 분석하는 데이터 엔지니어링 <br>프로젝트입니다.
 
-본 프로젝트는 금융감독원에서 제공하는 **대규모 재무제표 데이터**를 기반으로, **기업의 재무 건전성**을 다각도로 분석하는 데이터 엔지니어링 프로젝트입니다.
-
-**MySQL의 파티셔닝 기능**을 활용해 **연도별·기업별** 데이터 처리 성능을 극대화하고, SQL 기반의 지표 계산을 통해 **위험 기업 탐지, 산업군 비교 분석, 성장성 평가** 등 다양한 정량적 인사이트를 도출합니다.
+**MySQL의 파티셔닝 기능**을 활용해 **연도별·기업별** 데이터 처리 성능을 극대화하고, SQL 기반의 지표 계산을 통해 **위험 기업 탐지, 산업군 비교 분석, <br>성장성 평가** 등 다양한 정량적 인사이트를 도출합니다.
 
 ---
 
@@ -23,6 +22,8 @@
 
   </tbody>
 </table>
+
+<br>
 
 본 프로젝트에 대한 자세한 정리는 Notion에서 확인할 수 있습니다.  
 👉 [📘 노션 문서 바로가기](https://www.notion.so/FISA-2-22a345bedb798036b02ef2342873da8a?source=copy_link)  
@@ -169,20 +170,117 @@ SUBPARTITIONS 3 (
   JOIN equity e
     ON d.회사명 = e.회사명 AND d.결산기준일 = e.결산기준일;
   ```
-  
+
+<br>
 
 - **자본잠식 기업 탐지**  
   `자본총계 <= 0` 조건
 
+  ```sql
+  SELECT 회사명, 종목코드, 결산기준일, SUM(금액) AS 자본총계
+  FROM finance_data_partitioned
+  WHERE 항목코드 LIKE '%Equity%'
+    AND YEAR(결산기준일) = 2023
+  GROUP BY 회사명, 종목코드, 결산기준일
+  HAVING 자본총계 <= 0;
+  ```
+<br>
+
 - **ROE (자기자본이익률)**  
   `당기순이익 / 자본총계 * 100` (2022~2024)
+
+  ```sql
+  WITH profit AS (
+    SELECT 회사명, 종목코드, 결산기준일, SUM(금액) AS 당기순이익
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%ProfitLoss%' AND YEAR(결산기준일) = 2022
+    GROUP BY 회사명, 종목코드, 결산기준일
+  ),
+  equity AS (
+    SELECT 회사명, 종목코드, 결산기준일, SUM(금액) AS 자본총계
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%Equity%' AND YEAR(결산기준일) = 2022
+    GROUP BY 회사명, 종목코드, 결산기준일
+  )
+  SELECT p.회사명, p.종목코드, p.결산기준일,
+         ROUND(p.당기순이익 / NULLIF(e.자본총계, 0) * 100, 2) AS ROE
+  FROM profit p
+  JOIN equity e
+    ON p.회사명 = e.회사명 AND p.결산기준일 = e.결산기준일
+  WHERE e.자본총계 > 0;
+  ```
+
+  <br>
 
 - **영업이익 증가율 분석**  
   전년도 대비 증감률 계산
 
+  ```sql
+  WITH prev AS (
+    SELECT 회사명, 종목코드, SUM(금액) AS 영업이익_전기
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%ifrs%' AND 항목코드 LIKE '%OperatingIncome%' AND 결산기준일 = '2022-12-31'
+    GROUP BY 회사명, 종목코드
+  ),
+  curr AS (
+    SELECT 회사명, 종목코드, SUM(금액) AS 영업이익_당기
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%ifrs%' AND 항목코드 LIKE '%OperatingIncome%' AND 결산기준일 = '2023-12-31'
+    GROUP BY 회사명, 종목코드
+  )
+  SELECT 
+    c.회사명,
+    c.종목코드,
+    c.영업이익_당기,
+    p.영업이익_전기,
+    ROUND((c.영업이익_당기 - p.영업이익_전기) / NULLIF(p.영업이익_전기, 0) * 100, 2) AS 증가율
+  FROM curr c
+  JOIN prev p 
+    ON c.회사명 = p.회사명 AND c.종목코드 = p.종목코드
+  WHERE 
+    p.영업이익_전기 IS NOT NULL
+    AND c.영업이익_당기 IS NOT NULL
+    AND p.영업이익_전기 != 0
+    AND ROUND((c.영업이익_당기 - p.영업이익_전기) / NULLIF(p.영업이익_전기, 0) * 100, 2) BETWEEN -200 AND 500;
+  ```
+
+<br>
+
 - **위험 기업 수 집계**  
   `부채비율 > 200%` 또는 `자본총계 ≤ 0` 조건 포함
+  
+  ```sql
+  WITH debt AS (
+    SELECT 회사명, 종목코드, 결산기준일, SUM(금액) AS 총부채
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%Liabilit%'
+    GROUP BY 회사명, 종목코드, 결산기준일
+  ),
+  equity AS (
+    SELECT 회사명, 종목코드, 결산기준일, SUM(금액) AS 자본총계
+    FROM finance_data_partitioned
+    WHERE 항목코드 LIKE '%Equity%'
+    GROUP BY 회사명, 종목코드, 결산기준일
+  ),
+  joined AS (
+    SELECT d.회사명, d.종목코드, d.결산기준일,
+           d.총부채, e.자본총계,
+           ROUND(d.총부채 / NULLIF(e.자본총계, 0) * 100, 2) AS 부채비율
+    FROM debt d
+    JOIN equity e ON d.회사명 = e.회사명 AND d.결산기준일 = e.결산기준일
+  )
+  SELECT 
+    YEAR(결산기준일) AS 연도,
+    COUNT(*) AS 위험기업수
+  FROM joined
+  WHERE 
+    (부채비율 > 200 AND 자본총계 > 0)  -- 레버리지 과다
+    OR 자본총계 <= 0                   -- 자본잠식
+  GROUP BY YEAR(결산기준일)
+  ORDER BY 연도;
+  ```
 
+---
 
 ### 🔍 주요 분석 결과
 
@@ -617,5 +715,3 @@ WHERE d.총부채 >= 0 AND e.자본총계 > 0;
   
 
 </details>
-
-
