@@ -25,7 +25,7 @@
 </table>
 
 본 프로젝트에 대한 자세한 정리는 Notion에서 확인할 수 있습니다.  
-👉 [📘 노션 문서 바로가기](https://www.notion.so/your-notion-link)  
+👉 [📘 노션 문서 바로가기](https://www.notion.so/FISA-2-22a345bedb798036b02ef2342873da8a?source=copy_link)  
 
 ---
 
