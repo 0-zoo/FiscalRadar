@@ -1,3 +1,5 @@
+<br>
+
 # 📊 재무 건전성 분석 시스템 (MySQL 파티셔닝 기반)
 
 ## 🧾 개요
@@ -132,7 +134,7 @@ ROE 하락, 비용 증가 → 건전성 경고
 
 ## 🧯 트러블슈팅
 
----
+<br>
 
 <details>
 <summary>🔧 1. 외부 테이블을 이용하기 위한 파일 위치 선정</summary>
@@ -163,7 +165,7 @@ error opening file /ce5/02.sql/csv/TEST_EXTERNAL_1887.log
 
 </details>
 
----
+____
 
 <details>
 <summary>🔧 2. Oracle SQL 테이블 컬럼명이 한글로 깨져서 출력됨</summary>
@@ -195,7 +197,7 @@ export NLS_LANG=KOREAN_KOREA.AL32UTF8
 
 </details>
 
----
+____
 
 <details>
 <summary>🔧 3. Oracle에서 파티셔닝 안됨</summary>
@@ -217,7 +219,7 @@ export NLS_LANG=KOREAN_KOREA.AL32UTF8
 
 </details>
 
----
+____
 
 <details>
 <summary>🔧 4. 문자열 길이가 컬럼 정의보다 길기 때문에 발생하는 오류</summary>
@@ -247,7 +249,7 @@ MODIFY COLUMN 항목코드 VARCHAR(500);
 
 </details>
 
----
+____
 
 <details>
 <summary>🔧 5. RANGE 파티셔닝은 사용할 수 있는 컬럼 타입에 제한</summary>
@@ -270,7 +272,7 @@ MODIFY COLUMN 항목코드 VARCHAR(500);
 
 </details>
 
----
+____
 
 <details>
 <summary>🔧 6. Oracle - Tableau 연결 실패</summary>
@@ -295,8 +297,7 @@ MODIFY COLUMN 항목코드 VARCHAR(500);
 
 </details>
 
----
-
+____
 <details>
 <summary>🔧 7. MySQL 내에서 [] 처리 안 되는 문제</summary>
 
@@ -321,7 +322,7 @@ df['종목코드'] = df['종목코드'].apply(lambda x: str(x).replace('[', '').
 
 </details>
 
----
+____
 
 <details>
 <summary>🔧 8. 항목코드 해석 문제</summary>
