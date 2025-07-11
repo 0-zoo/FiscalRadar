@@ -10,7 +10,7 @@ MySQL의 파티셔닝 기능을 적극 활용하여 **연도별·기업별 재�
 <table>
   <tbody>
     <tr>
-      <td align="center"><a href="https://github.com/nn.0_0.n"><img src="https://github.com/nn.0_0.n.png" width="100px;" alt=""/><br /><sub><b>@nn.0_0.n</b></sub></a><br /></td>
+      <td align="center"><a href="https://github.com/moonstone0514"><img src="https://github.com/moonstone0514.png" width="100px;" alt=""/><br /><sub><b>@moonstone0514</b></sub></a><br /></td>
       <td align="center"><a href="https://github.com/yeomyeoung"><img src="https://github.com/yeomyeoung.png" width="100px;" alt=""/><br /><sub><b>@yeomyeoung</b></sub></a><br /></td>
       <td align="center"><a href="https://github.com/0-zoo"><img src="https://github.com/0-zoo.png" width="100px;" alt=""/><br /><sub><b>@0-zoo</b></sub></a><br /></td>
       <td align="center"><a href="https://github.com/Jsumin07"><img src="https://github.com/Jsumin07.png" width="100px;" alt=""/><br /><sub><b>@Jsumin07</b></sub></a><br /></td>
@@ -123,6 +123,80 @@ ROE 하락 + 비용 증가 → 건전성 저하 경고
 이자비용 상승 → 수익성 압박
 
 <br>
+
+---
+
+## ✅ 주요 기능 구현 요약 및 핵심 SQL 분석 결과
+<br>
+
+### ✅ 데이터 처리 및 테이블 설계
+- `financial` 테이블 생성 및 `항목코드` 필드를 `TEXT` 타입으로 변경 (길이 제한 이슈 해결)
+- CSV 데이터(`total_final.csv`) 로드 시 `STR_TO_DATE` 함수로 날짜 문자열을 `결산기준일`에 변환 저장
+- `금액` 필드는 문자열에서 숫자로 정제 (`REPLACE` + `CAST`)
+
+<br>
+
+### 🗂 파티셔닝 적용
+- `finance_data_partitioned` 테이블에 **연도 기준 RANGE 파티셔닝** 적용
+  - 파티션: 2022, 2023, 2024, MAXVALUE
+- 정제된 데이터를 `financial` → `finance_data_partitioned`로 이관
+
+<br>
+
+### 📊 재무 지표 분석 SQL
+
+- **부채비율 계산**  
+  `총부채 / 자본총계 * 100`  
+  (연도별 · 기업별)
+
+- **자본잠식 기업 탐지**  
+  `자본총계 <= 0` 조건
+
+- **ROE (자기자본이익률)**  
+  `당기순이익 / 자본총계 * 100` (2022~2024)
+
+- **영업이익 증가율 분석**  
+  전년도 대비 증감률 계산
+
+- **위험 기업 수 집계**  
+  `부채비율 > 200%` 또는 `자본총계 ≤ 0` 조건 포함
+
+<br>
+
+### 🔍 주요 분석 결과 예시
+
+- **부채비율 > 200% 기업**  
+  유안타증권, DB금융투자, 한국투자증권 등 다수 존재
+
+- **자본잠식 기업 (2023년 기준)**  
+  BNK금융지주, TS인베스트먼트, 삼성카드, 현대해상 등 약 28개사
+
+- **ROE 최고치 기업 (2023)**  
+  한국스탠다드차타드은행, 신한라이프생명보험, NH투자증권 등
+
+- **연도별 위험 기업 수**
+  - 2022년: `14개사`
+  - 2023년: `14개사`
+  - 2024년: `16개사`
+
+---
+
+### 🏷 업종별 평균 ROE (2022~2024)
+
+- **2022년**
+  - 보험업: `20,000` 이상
+  - 은행 및 저축기관, 기타 금융업, 금융 지원 서비스업 등
+
+- **2023년**
+  - 보험업, 재보험업, 기타 금융업 상위 유지
+  - 평균 ROE: `13200 ~ 9500` 수준
+
+- **2024년**
+  - 재보험업: `11,000+`
+  - 금융 지원 서비스업, 은행, 신탁업 등 안정적 성장
+
+---
+
 
 ## 🧯 트러블슈팅
 
