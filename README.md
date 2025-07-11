@@ -128,13 +128,16 @@ ROE 하락, 비용 증가 → 건전성 경고
 
 이자비용 상승, 자본 확충 → 수익성 압박
 
+---
 
-🧯 트러블슈팅
-<details> <summary>1. 외부 테이블을 이용하기 위한 파일 위치 선정</summary>
-현상: 외부 테이블 사용 시 파일 경로 문제로 인식 실패
-
-해결: 상대경로 대신 절대경로 지정하여 해결 (/var/lib/mysql-files/)
-
-비고: MySQL secure_file_priv 설정도 함께 확인 필요
+## 🧯 트러블슈팅
+<details> <summary>+ 1. 외부 테이블을 이용하기 위한 파일 위치 선정</summary> </details> 
+<details> <summary>+ 2. Oracle SQL 테이블 컬럼명이 한글로 깨져서 출력됨</summary> </details> 
+<details> <summary>+ 3. Oracle에서 파티셔닝 안됨</summary> </details> 
+<details> <summary>+ 4. 문자열 길이가 컬럼 정의보다 길기 때문에 발생하는 오류</summary> </details> 
+<details> <summary>+ 5. RANGE 파티셔닝은 사용할 수 있는 컬럼 타입에 제한</summary> </details> 
+<details> <summary>+ 6. Oracle - Tableau 연결 실패</summary> </details> 
+<details> <summary>+ 7. MySQL 내에서 [] 처리 안 되는 문제</summary> </details> 
+<details> <summary>+ 8. 항목코드 해석 문제</summary> </details>
 
 
